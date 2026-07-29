@@ -3,7 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/insomnia-plugin-openapi-drift-check.svg)](https://www.npmjs.com/package/insomnia-plugin-openapi-drift-check)
 [![license: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-Local-only OpenAPI drift reports for Insomnia.
+Local-only OpenAPI drift reports for Insomnia. v1.0.1 adds dependency-free simple YAML route parsing.
 
 OpenAPI Drift Check compares Insomnia request routes to a JSON OpenAPI/Swagger spec found in the workspace export and reports undocumented requests, missing spec operations, method mismatches, and duplicate request routes.
 
@@ -62,7 +62,7 @@ The MVP looks for a JSON OpenAPI/Swagger spec embedded in the Insomnia workspace
 - `schema`
 - `text`
 
-It supports JSON specs. YAML parsing is intentionally not included to keep the plugin dependency-free.
+It supports JSON specs and simple dependency-free YAML route parsing for `paths:` + HTTP methods.
 
 ## Example report
 

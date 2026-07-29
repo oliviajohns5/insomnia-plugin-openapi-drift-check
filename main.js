@@ -60,13 +60,31 @@ function tryJson(text) {
   try { return JSON.parse(text); } catch { return null; }
 }
 
+
+function tryYamlOpenApi(text) {
+  const lines = safeString(text).split(/\r?\n/);
+  const paths = {};
+  let inPaths = false;
+  let currentPath = null;
+  for (const line of lines) {
+    if (/^paths:\s*$/.test(line.trim())) { inPaths = true; currentPath = null; continue; }
+    if (!inPaths) continue;
+    const mPath = line.match(/^\s{2}([\/'"][^:'"]+['"]?):\s*$/);
+    if (mPath) { currentPath = mPath[1].replace(/^['"]|['"]$/g, ''); paths[currentPath] = paths[currentPath] || {}; continue; }
+    const mMethod = line.match(/^\s{4}(get|post|put|patch|delete|head|options|trace):\s*$/i);
+    if (currentPath && mMethod) paths[currentPath][mMethod[1].toLowerCase()] = {};
+    if (/^\S/.test(line) && !/^paths:/.test(line.trim())) inPaths = false;
+  }
+  return Object.keys(paths).length ? { openapi: 'yaml-detected', paths } : null;
+}
+
 function extractSpecCandidates(parsed) {
   const candidates = [];
   walk(parsed, (obj, path) => {
     if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return;
     for (const key of ['contents', 'content', 'spec', 'schema', 'text']) {
       if (typeof obj[key] === 'string') {
-        const parsedSpec = tryJson(obj[key]);
+        const parsedSpec = tryJson(obj[key]) || tryYamlOpenApi(obj[key]);
         if (parsedSpec && (parsedSpec.openapi || parsedSpec.swagger || parsedSpec.paths)) candidates.push({ spec: parsedSpec, location: `${path}.${key}` });
       }
     }
@@ -106,7 +124,7 @@ function driftCheck(rawExport) {
   const specCandidate = pickSpec(parsed);
   const findings = [];
   if (!specCandidate) {
-    add(findings, 'medium', 'missing-openapi-spec', 'workspace', 'No JSON OpenAPI/Swagger spec found in workspace export', 'Add an OpenAPI spec/design document to compare against.');
+    add(findings, 'medium', 'missing-openapi-spec', 'workspace', 'No JSON/YAML OpenAPI/Swagger spec found in workspace export', 'Add an OpenAPI spec/design document to compare against.');
     return findings;
   }
   const specRoutes = collectSpecRoutes(specCandidate.spec);
@@ -143,7 +161,7 @@ function summarize(findings) {
 function makeMarkdown(findings) {
   const counts = summarize(findings);
   const rows = findings.map(f => `| ${f.severity} | ${f.type} | ${f.location} | ${f.message} | ${String(f.preview).replace(/\|/g, '\\|')} |`).join('\n');
-  return `# Insomnia OpenAPI Drift Check Report\n\nGenerated: ${new Date().toISOString()}\n\nLocal-only report. Compares Insomnia request routes to a JSON OpenAPI/Swagger spec found in the workspace export.\n\n## Summary\n\n- High: ${counts.high}\n- Medium: ${counts.medium}\n- Low: ${counts.low}\n\n## Findings\n\n| Severity | Type | Location | Message | Preview |\n|---|---|---|---|---|\n${rows || '| low | none | workspace | No OpenAPI route drift detected. |  |'}\n`;
+  return `# Insomnia OpenAPI Drift Check Report\n\nGenerated: ${new Date().toISOString()}\n\nLocal-only report. Compares Insomnia request routes to a JSON or simple YAML OpenAPI/Swagger spec found in the workspace export.\n\n## Summary\n\n- High: ${counts.high}\n- Medium: ${counts.medium}\n- Low: ${counts.low}\n\n## Findings\n\n| Severity | Type | Location | Message | Preview |\n|---|---|---|---|---|\n${rows || '| low | none | workspace | No OpenAPI route drift detected. |  |'}\n`;
 }
 
 async function getWritableExportPath(context, fileName) {
@@ -176,4 +194,4 @@ const action = {
 module.exports.workspaceActions = [action];
 module.exports.requestGroupActions = [action];
 module.exports.requestActions = [action];
-module.exports.__test = { collectRequests, collectSpecRoutes, driftCheck, extractSpecCandidates, getWritableExportPath, makeMarkdown, normalizePath, parseExport, parseRequestRoute, pickSpec, routeKey, summarize };
+module.exports.__test = { collectRequests, collectSpecRoutes, driftCheck, extractSpecCandidates, getWritableExportPath, makeMarkdown, normalizePath, parseExport, tryYamlOpenApi, parseRequestRoute, pickSpec, routeKey, summarize };

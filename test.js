@@ -27,6 +27,8 @@ async function main(){
   assert.strictEqual(t.collectRequests(exp).length, 4);
   assert.strictEqual(t.collectSpecRoutes(spec).length, 3);
   assert(t.pickSpec(exp).spec.openapi);
+  const yaml = 'openapi: 3.0.0\npaths:\n  /yaml/{id}:\n    get:\n      responses: {}\n';
+  assert.strictEqual(t.collectSpecRoutes(t.tryYamlOpenApi(yaml))[0].key, 'GET /yaml/{id}');
   const findings=t.driftCheck(workspace);
   const types=new Set(findings.map(f=>f.type));
   for (const expected of ['undocumented-request','missing-request','method-mismatch','duplicate-request-route']) assert(types.has(expected), expected);
