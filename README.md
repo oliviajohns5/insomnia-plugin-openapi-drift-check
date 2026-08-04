@@ -3,7 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/insomnia-plugin-openapi-drift-check.svg)](https://www.npmjs.com/package/insomnia-plugin-openapi-drift-check)
 [![license: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-Local-only OpenAPI drift reports for Insomnia. v1.0.1 adds dependency-free simple YAML route parsing.
+Local-only OpenAPI drift reports for Insomnia. v1.1.0 adds coverage scores so teams can see how much of the workspace matches the OpenAPI contract.
 
 OpenAPI Drift Check compares Insomnia request routes to a JSON OpenAPI/Swagger spec found in the workspace export and reports undocumented requests, missing spec operations, method mismatches, and duplicate request routes.
 
@@ -19,6 +19,7 @@ Do the requests in my Insomnia workspace still match my OpenAPI contract?
 
 - Finds JSON OpenAPI/Swagger specs inside the workspace export
 - Compares `METHOD /path` routes against Insomnia requests
+- Adds coverage scores for workspace routes covered by spec and spec routes represented in workspace
 - Reports Insomnia requests missing from the spec
 - Reports spec operations missing from Insomnia
 - Reports method mismatches for known paths
@@ -68,6 +69,18 @@ It supports JSON specs and simple dependency-free YAML route parsing for `paths:
 
 ```markdown
 # Insomnia OpenAPI Drift Check Report
+
+## Summary
+
+- High: 1
+- Medium: 2
+- Low: 1
+
+## Coverage
+
+- Workspace routes covered by spec: 50% (2/4)
+- Spec routes represented in workspace: 33% (1/3)
+- Spec source: $.resources[0].contents
 
 | Severity | Type | Location | Message | Preview |
 |---|---|---|---|---|

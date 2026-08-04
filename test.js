@@ -32,8 +32,14 @@ async function main(){
   const findings=t.driftCheck(workspace);
   const types=new Set(findings.map(f=>f.type));
   for (const expected of ['undocumented-request','missing-request','method-mismatch','duplicate-request-route']) assert(types.has(expected), expected);
-  const report=t.makeMarkdown(findings);
+  const coverage=t.coverageStats(workspace);
+  assert.strictEqual(coverage.workspaceCoveredPercent, 50, 'workspace coverage percent');
+  assert.strictEqual(coverage.specCoveredPercent, 33, 'spec coverage percent');
+  const report=t.makeMarkdown(findings, coverage);
   assert(report.includes('# Insomnia OpenAPI Drift Check Report'));
+  assert(report.includes('## Coverage'));
+  assert(report.includes('Workspace routes covered by spec: 50% (2/4)'));
+  assert(report.includes('Spec routes represented in workspace: 33% (1/3)'));
   assert(report.includes('| Severity | Type | Location | Message | Preview |'));
   const missing=t.driftCheck(JSON.stringify({resources:[{_type:'request',method:'GET',url:'https://x.test/a'}]}));
   assert(missing.some(f=>f.type==='missing-openapi-spec'));

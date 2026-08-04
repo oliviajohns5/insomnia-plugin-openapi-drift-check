@@ -1,7 +1,7 @@
 {
   "name": "insomnia-plugin-openapi-drift-check",
-  "version": "1.0.1",
-  "description": "Local-only Insomnia OpenAPI drift reports with JSON/simple-YAML route parsing, undocumented request checks, and missing operations.",
+  "version": "1.1.0",
+  "description": "Local-only Insomnia OpenAPI drift reports with coverage scores, JSON/simple-YAML route parsing, undocumented request checks, and missing operations.",
   "main": "main.js",
   "license": "MIT",
   "author": "oliviajohns5",
@@ -36,7 +36,7 @@
   "insomnia": {
     "name": "openapi-drift-check",
     "displayName": "OpenAPI Drift Check",
-    "description": "Exports a local report comparing Insomnia request routes to a JSON OpenAPI/Swagger spec in the workspace.",
+    "description": "Exports a local report comparing Insomnia request routes to a JSON OpenAPI/Swagger spec, including coverage scores.",
     "images": {
       "icon": "icon.svg",
       "cover": "cover.svg"

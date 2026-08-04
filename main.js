@@ -158,10 +158,41 @@ function summarize(findings) {
   return findings.reduce((acc, f) => { acc[f.severity] = (acc[f.severity] || 0) + 1; return acc; }, { high: 0, medium: 0, low: 0 });
 }
 
-function makeMarkdown(findings) {
+function percent(part, total) {
+  if (!total) return 0;
+  return Math.round((part / total) * 100);
+}
+
+function coverageStats(rawExport) {
+  const parsed = parseExport(rawExport);
+  const requests = collectRequests(parsed);
+  const specCandidate = pickSpec(parsed);
+  const specRoutes = specCandidate ? collectSpecRoutes(specCandidate.spec) : [];
+  const specKeys = new Set(specRoutes.map(r => r.key));
+  const requestKeys = new Set(requests.map(r => r.key));
+  const workspaceCovered = requests.filter(r => specKeys.has(r.key)).length;
+  const specCovered = specRoutes.filter(r => requestKeys.has(r.key)).length;
+  return {
+    requestRoutes: requests.length,
+    specRoutes: specRoutes.length,
+    workspaceCovered,
+    specCovered,
+    workspaceCoveredPercent: percent(workspaceCovered, requests.length),
+    specCoveredPercent: percent(specCovered, specRoutes.length),
+    specLocation: specCandidate ? specCandidate.location : '',
+  };
+}
+
+function makeCoverageMarkdown(coverage) {
+  if (!coverage) return 'Coverage unavailable.';
+  if (!coverage.specRoutes) return 'No OpenAPI operations found for coverage scoring.';
+  return `- Workspace routes covered by spec: ${coverage.workspaceCoveredPercent}% (${coverage.workspaceCovered}/${coverage.requestRoutes})\n- Spec routes represented in workspace: ${coverage.specCoveredPercent}% (${coverage.specCovered}/${coverage.specRoutes})\n- Spec source: ${coverage.specLocation || 'workspace'}`;
+}
+
+function makeMarkdown(findings, coverage) {
   const counts = summarize(findings);
   const rows = findings.map(f => `| ${f.severity} | ${f.type} | ${f.location} | ${f.message} | ${String(f.preview).replace(/\|/g, '\\|')} |`).join('\n');
-  return `# Insomnia OpenAPI Drift Check Report\n\nGenerated: ${new Date().toISOString()}\n\nLocal-only report. Compares Insomnia request routes to a JSON or simple YAML OpenAPI/Swagger spec found in the workspace export.\n\n## Summary\n\n- High: ${counts.high}\n- Medium: ${counts.medium}\n- Low: ${counts.low}\n\n## Findings\n\n| Severity | Type | Location | Message | Preview |\n|---|---|---|---|---|\n${rows || '| low | none | workspace | No OpenAPI route drift detected. |  |'}\n`;
+  return `# Insomnia OpenAPI Drift Check Report\n\nGenerated: ${new Date().toISOString()}\n\nLocal-only report. Compares Insomnia request routes to a JSON or simple YAML OpenAPI/Swagger spec found in the workspace export.\n\n## Summary\n\n- High: ${counts.high}\n- Medium: ${counts.medium}\n- Low: ${counts.low}\n\n## Coverage\n\n${makeCoverageMarkdown(coverage)}\n\n## Findings\n\n| Severity | Type | Location | Message | Preview |\n|---|---|---|---|---|\n${rows || '| low | none | workspace | No OpenAPI route drift detected. |  |'}\n`;
 }
 
 async function getWritableExportPath(context, fileName) {
@@ -181,7 +212,7 @@ const action = {
   icon: 'fa-route',
   action: async (context) => {
     const raw = await context.data.export.insomnia({ includePrivate: false, format: 'json' });
-    const report = makeMarkdown(driftCheck(raw));
+    const report = makeMarkdown(driftCheck(raw), coverageStats(raw));
     const fs = require('fs');
     let output = null;
     if (context.app && typeof context.app.showSaveDialog === 'function') output = await context.app.showSaveDialog({ defaultPath: 'insomnia-openapi-drift.md' });
@@ -194,4 +225,4 @@ const action = {
 module.exports.workspaceActions = [action];
 module.exports.requestGroupActions = [action];
 module.exports.requestActions = [action];
-module.exports.__test = { collectRequests, collectSpecRoutes, driftCheck, extractSpecCandidates, getWritableExportPath, makeMarkdown, normalizePath, parseExport, tryYamlOpenApi, parseRequestRoute, pickSpec, routeKey, summarize };
+module.exports.__test = { collectRequests, collectSpecRoutes, coverageStats, driftCheck, extractSpecCandidates, getWritableExportPath, makeMarkdown, normalizePath, parseExport, tryYamlOpenApi, parseRequestRoute, pickSpec, routeKey, summarize };
