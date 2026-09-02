@@ -26,6 +26,8 @@ async function main(){
   const exp=t.parseExport(workspace);
   assert.strictEqual(t.collectRequests(exp).length, 4);
   assert.strictEqual(t.collectSpecRoutes(spec).length, 3);
+  const swaggerRoutes = t.collectSpecRoutes({ swagger: '2.0', basePath: '/v1', paths: { '/legacy/{id}': { get: { operationId: 'legacyGet' } } } });
+  assert.strictEqual(swaggerRoutes[0].key, 'GET /v1/legacy/{id}');
   assert(t.pickSpec(exp).spec.openapi);
   const yaml = 'openapi: 3.0.0\npaths:\n  /yaml/{id}:\n    get:\n      responses: {}\n';
   assert.strictEqual(t.collectSpecRoutes(t.tryYamlOpenApi(yaml))[0].key, 'GET /yaml/{id}');

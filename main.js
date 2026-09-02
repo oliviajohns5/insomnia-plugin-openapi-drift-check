@@ -100,15 +100,22 @@ function pickSpec(parsed) {
   return candidates[0];
 }
 
+function specBasePath(spec) {
+  if (spec && spec.swagger && spec.basePath) return normalizePath(spec.basePath);
+  return '';
+}
+
 function collectSpecRoutes(spec) {
   const routes = [];
   const paths = spec && spec.paths && typeof spec.paths === 'object' ? spec.paths : {};
+  const basePath = specBasePath(spec);
   for (const [pathName, item] of Object.entries(paths)) {
     if (!item || typeof item !== 'object') continue;
+    const fullPath = basePath && basePath !== '/' ? `${basePath}${String(pathName).startsWith('/') ? pathName : '/' + pathName}` : pathName;
     for (const [method, operation] of Object.entries(item)) {
       const upper = method.toUpperCase();
       if (!METHODS.has(upper)) continue;
-      routes.push({ method: upper, path: normalizePath(pathName), key: routeKey(upper, pathName), operationId: safeString(operation && operation.operationId || '') });
+      routes.push({ method: upper, path: normalizePath(fullPath), key: routeKey(upper, fullPath), operationId: safeString(operation && operation.operationId || '') });
     }
   }
   return routes;
@@ -225,4 +232,4 @@ const action = {
 module.exports.workspaceActions = [action];
 module.exports.requestGroupActions = [action];
 module.exports.requestActions = [action];
-module.exports.__test = { collectRequests, collectSpecRoutes, coverageStats, driftCheck, extractSpecCandidates, getWritableExportPath, makeMarkdown, normalizePath, parseExport, tryYamlOpenApi, parseRequestRoute, pickSpec, routeKey, summarize };
+module.exports.__test = { collectRequests, collectSpecRoutes, coverageStats, driftCheck, extractSpecCandidates, getWritableExportPath, makeMarkdown, normalizePath, parseExport, tryYamlOpenApi, parseRequestRoute, pickSpec, routeKey, specBasePath, summarize };

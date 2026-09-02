@@ -128,3 +128,9 @@ npm pack --dry-run
 ## License
 
 MIT
+
+## Changelog
+
+### 1.1.1
+
+- Adds Swagger 2.0 basePath handling so legacy specs match Insomnia routes correctly.
