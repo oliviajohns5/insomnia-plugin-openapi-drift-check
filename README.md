@@ -24,7 +24,7 @@ Do the requests in my Insomnia workspace still match my OpenAPI contract?
 - Reports spec operations missing from Insomnia
 - Reports method mismatches for known paths
 - Reports duplicate request routes
-- Handles `:id`, `{id}`, numeric IDs, and UUID-like path segments
+- Handles `:id`, `{id}`, numeric IDs, UUID-like path segments, OpenAPI 3 `servers[].url` path prefixes, and common templated base URLs such as `{{ _.baseUrl }}/path`
 - Local Markdown export
 - No cloud, no telemetry, no backend, no dependencies
 
@@ -130,6 +130,10 @@ npm pack --dry-run
 MIT
 
 ## Changelog
+
+### 1.1.2
+
+- Adds OpenAPI 3 `servers[].url` path-prefix matching and normalizes common templated Insomnia base URL prefixes before route comparison.
 
 ### 1.1.1
 

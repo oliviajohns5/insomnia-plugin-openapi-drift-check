@@ -23,8 +23,26 @@ function isRequest(obj) {
   return obj && typeof obj === 'object' && typeof obj.url === 'string' && (typeof obj.method === 'string' || String(obj._type || '').toLowerCase() === 'request');
 }
 
+function stripTemplatedBaseUrlPrefix(value) {
+  return safeString(value).trim().replace(/^\{\{\s*(?:_\s*\.\s*)?(?:baseUrl|baseURL|base_url|BASE_URL)\s*\}\}(?=\/|$)/, '');
+}
+
+function extractUrlPath(value) {
+  const raw = safeString(value).trim();
+  if (!raw) return '';
+  const withoutTemplatedBase = stripTemplatedBaseUrlPrefix(raw);
+  if (withoutTemplatedBase !== raw) return withoutTemplatedBase || '/';
+  try {
+    const u = new URL(raw);
+    return u.pathname || '/';
+  } catch {}
+  const absolute = raw.match(/^[a-z][a-z0-9+.-]*:\/\/[^/?#]*([^?#]*)/i);
+  if (absolute) return absolute[1] || '/';
+  return raw.match(/^[^?#]*/)[0];
+}
+
 function normalizePath(pathname) {
-  let p = safeString(pathname).split('?')[0].replace(/\/+/g, '/');
+  let p = extractUrlPath(pathname).split('?')[0].replace(/\/+/g, '/');
   if (!p.startsWith('/')) p = '/' + p;
   p = p.replace(/\{([^}]+)\}/g, '{$1}');
   p = p.replace(/:([A-Za-z0-9_]+)/g, '{$1}');
@@ -39,15 +57,11 @@ function routeKey(method, pathname) {
 
 function parseRequestRoute(obj) {
   const method = safeString(obj.method || 'GET').toUpperCase();
-  try {
-    const u = new URL(safeString(obj.url));
-    return { method, path: normalizePath(u.pathname), key: routeKey(method, u.pathname), host: u.hostname, name: safeString(obj.name || '') };
-  } catch {
-    const raw = safeString(obj.url || '');
-    const m = raw.match(/^(?:https?:\/\/[^/]+)?([^?#]*)/i);
-    const path = normalizePath(m ? m[1] : raw);
-    return { method, path, key: routeKey(method, path), host: '', name: safeString(obj.name || '') };
-  }
+  const raw = safeString(obj.url || '');
+  let host = '';
+  try { host = new URL(raw).hostname; } catch {}
+  const path = normalizePath(raw);
+  return { method, path, key: routeKey(method, path), host, name: safeString(obj.name || '') };
 }
 
 function collectRequests(parsed) {
@@ -100,8 +114,21 @@ function pickSpec(parsed) {
   return candidates[0];
 }
 
+function serverPathPrefix(server) {
+  const url = safeString(server && server.url || '');
+  if (!url) return '';
+  const path = normalizePath(url);
+  return path === '/' ? '' : path;
+}
+
 function specBasePath(spec) {
   if (spec && spec.swagger && spec.basePath) return normalizePath(spec.basePath);
+  if (spec && spec.openapi && Array.isArray(spec.servers)) {
+    for (const server of spec.servers) {
+      const prefix = serverPathPrefix(server);
+      if (prefix) return prefix;
+    }
+  }
   return '';
 }
 
@@ -232,4 +259,4 @@ const action = {
 module.exports.workspaceActions = [action];
 module.exports.requestGroupActions = [action];
 module.exports.requestActions = [action];
-module.exports.__test = { collectRequests, collectSpecRoutes, coverageStats, driftCheck, extractSpecCandidates, getWritableExportPath, makeMarkdown, normalizePath, parseExport, tryYamlOpenApi, parseRequestRoute, pickSpec, routeKey, specBasePath, summarize };
+module.exports.__test = { collectRequests, collectSpecRoutes, coverageStats, driftCheck, extractSpecCandidates, extractUrlPath, getWritableExportPath, makeMarkdown, normalizePath, parseExport, tryYamlOpenApi, parseRequestRoute, pickSpec, routeKey, serverPathPrefix, specBasePath, stripTemplatedBaseUrlPrefix, summarize };
