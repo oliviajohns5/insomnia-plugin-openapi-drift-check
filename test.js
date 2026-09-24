@@ -40,6 +40,9 @@ async function main(){
   const serverWorkspace = JSON.stringify({resources:[{contents:JSON.stringify({openapi:'3.0.0',servers:[{url:'https://api.example.com/v1'}],paths:{'/users/{id}':{get:{}}}})},{_type:'request',method:'GET',url:'{{ _.baseUrl }}/v1/users/42'}]});
   assert.deepStrictEqual(t.driftCheck(serverWorkspace), []);
   assert.strictEqual(t.coverageStats(serverWorkspace).workspaceCoveredPercent, 100);
+  assert.strictEqual(t.normalizeSaveDialogResult('/tmp/report.md'), '/tmp/report.md');
+  assert.strictEqual(t.normalizeSaveDialogResult({ filePath: '/tmp/report.md', canceled: false }), '/tmp/report.md');
+  assert.strictEqual(t.normalizeSaveDialogResult({ canceled: true }), null);
   assert(t.pickSpec(exp).spec.openapi);
   const yaml = 'openapi: 3.0.0\npaths:\n  /yaml/{id}:\n    get:\n      responses: {}\n';
   assert.strictEqual(t.collectSpecRoutes(t.tryYamlOpenApi(yaml))[0].key, 'GET /yaml/{id}');
@@ -61,7 +64,7 @@ async function main(){
   assert.strictEqual(t.summarize(clean).high,0);
   assert.strictEqual(t.summarize(clean).medium,0);
   const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'openapi-drift-'));
-  try{ for(const action of [plugin.workspaceActions[0],plugin.requestGroupActions[0],plugin.requestActions[0]]){ const out=path.join(tmp,Math.random().toString(36).slice(2)+'.md'); const c=ctx(out); await action.action(c); assert(fs.existsSync(out)); assert(fs.readFileSync(out,'utf8').includes('OpenAPI Drift Check Report')); assert.strictEqual(c.alerts.length,1); }} finally { fs.rmSync(tmp,{recursive:true,force:true}); }
+  try{ for(const action of [plugin.workspaceActions[0],plugin.requestGroupActions[0],plugin.requestActions[0]]){ const out=path.join(tmp,Math.random().toString(36).slice(2)+'.md'); const c=ctx(out); await action.action(c); assert(fs.existsSync(out)); assert(fs.readFileSync(out,'utf8').includes('OpenAPI Drift Check Report')); assert.strictEqual(c.alerts.length,1); } const objectOut=path.join(tmp,'object.md'); await plugin.requestActions[0].action(ctx({ filePath: objectOut, canceled: false })); assert(fs.existsSync(objectOut), 'object save dialog writes report'); } finally { fs.rmSync(tmp,{recursive:true,force:true}); }
   console.log('PASS: all tests');
 }
 main().catch(e=>{console.error(e.stack||e);process.exit(1);});

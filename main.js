@@ -241,6 +241,18 @@ async function getWritableExportPath(context, fileName) {
   return path.join(candidates.find(Boolean) || '.', fileName);
 }
 
+
+function normalizeSaveDialogResult(result) {
+  if (!result) return null;
+  if (typeof result === 'string') return result;
+  if (typeof result === 'object') {
+    if (result.canceled) return null;
+    if (typeof result.filePath === 'string' && result.filePath) return result.filePath;
+    if (typeof result.path === 'string' && result.path) return result.path;
+  }
+  return null;
+}
+
 const action = {
   label: 'OpenAPI Drift Check: Export Report',
   icon: 'fa-route',
@@ -249,7 +261,7 @@ const action = {
     const report = makeMarkdown(driftCheck(raw), coverageStats(raw));
     const fs = require('fs');
     let output = null;
-    if (context.app && typeof context.app.showSaveDialog === 'function') output = await context.app.showSaveDialog({ defaultPath: 'insomnia-openapi-drift.md' });
+    if (context.app && typeof context.app.showSaveDialog === 'function') output = normalizeSaveDialogResult(await context.app.showSaveDialog({ defaultPath: 'insomnia-openapi-drift.md' }));
     if (!output) output = await getWritableExportPath(context, 'insomnia-openapi-drift.md');
     fs.writeFileSync(output, report, 'utf8');
     if (context.app && typeof context.app.alert === 'function') await context.app.alert('OpenAPI Drift Check report exported', output);
@@ -259,4 +271,4 @@ const action = {
 module.exports.workspaceActions = [action];
 module.exports.requestGroupActions = [action];
 module.exports.requestActions = [action];
-module.exports.__test = { collectRequests, collectSpecRoutes, coverageStats, driftCheck, extractSpecCandidates, extractUrlPath, getWritableExportPath, makeMarkdown, normalizePath, parseExport, tryYamlOpenApi, parseRequestRoute, pickSpec, routeKey, serverPathPrefix, specBasePath, stripTemplatedBaseUrlPrefix, summarize };
+module.exports.__test = { collectRequests, collectSpecRoutes, coverageStats, driftCheck, extractSpecCandidates, extractUrlPath, getWritableExportPath, makeMarkdown, normalizePath, normalizeSaveDialogResult, parseExport, tryYamlOpenApi, parseRequestRoute, pickSpec, routeKey, serverPathPrefix, specBasePath, stripTemplatedBaseUrlPrefix, summarize };

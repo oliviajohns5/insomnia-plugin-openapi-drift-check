@@ -131,6 +131,11 @@ MIT
 
 ## Changelog
 
+### 1.1.3
+
+- Report export now supports Electron-style save dialog results returned by newer Insomnia contexts.
+
+
 ### 1.1.2
 
 - Adds OpenAPI 3 `servers[].url` path-prefix matching and normalizes common templated Insomnia base URL prefixes before route comparison.
