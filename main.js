@@ -260,9 +260,13 @@ const action = {
     const raw = await context.data.export.insomnia({ includePrivate: false, format: 'json' });
     const report = makeMarkdown(driftCheck(raw), coverageStats(raw));
     const fs = require('fs');
-    let output = null;
-    if (context.app && typeof context.app.showSaveDialog === 'function') output = normalizeSaveDialogResult(await context.app.showSaveDialog({ defaultPath: 'insomnia-openapi-drift.md' }));
-    if (!output) output = await getWritableExportPath(context, 'insomnia-openapi-drift.md');
+    let output;
+    if (context.app && typeof context.app.showSaveDialog === 'function') {
+      output = normalizeSaveDialogResult(await context.app.showSaveDialog({ defaultPath: 'insomnia-openapi-drift.md' }));
+      if (!output) return;
+    } else {
+      output = await getWritableExportPath(context, 'insomnia-openapi-drift.md');
+    }
     fs.writeFileSync(output, report, 'utf8');
     if (context.app && typeof context.app.alert === 'function') await context.app.alert('OpenAPI Drift Check report exported', output);
   }

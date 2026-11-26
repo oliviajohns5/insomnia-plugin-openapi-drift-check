@@ -64,7 +64,48 @@ async function main(){
   assert.strictEqual(t.summarize(clean).high,0);
   assert.strictEqual(t.summarize(clean).medium,0);
   const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'openapi-drift-'));
-  try{ for(const action of [plugin.workspaceActions[0],plugin.requestGroupActions[0],plugin.requestActions[0]]){ const out=path.join(tmp,Math.random().toString(36).slice(2)+'.md'); const c=ctx(out); await action.action(c); assert(fs.existsSync(out)); assert(fs.readFileSync(out,'utf8').includes('OpenAPI Drift Check Report')); assert.strictEqual(c.alerts.length,1); } const objectOut=path.join(tmp,'object.md'); await plugin.requestActions[0].action(ctx({ filePath: objectOut, canceled: false })); assert(fs.existsSync(objectOut), 'object save dialog writes report'); } finally { fs.rmSync(tmp,{recursive:true,force:true}); }
+  try {
+    for (const action of [plugin.workspaceActions[0], plugin.requestGroupActions[0], plugin.requestActions[0]]) {
+      const out = path.join(tmp, Math.random().toString(36).slice(2) + '.md');
+      const c = ctx(out);
+      await action.action(c);
+      assert(fs.existsSync(out));
+      assert(fs.readFileSync(out, 'utf8').includes('OpenAPI Drift Check Report'));
+      assert.strictEqual(c.alerts.length, 1);
+    }
+    const objectOut = path.join(tmp, 'object.md');
+    await plugin.requestActions[0].action(ctx({ filePath: objectOut, canceled: false }));
+    assert(fs.existsSync(objectOut), 'object save dialog writes report');
+
+    const canceledPath = path.join(tmp, 'existing.md');
+    fs.writeFileSync(canceledPath, 'keep original');
+    const canceled = ctx({ canceled: true, filePath: canceledPath });
+    canceled.app.getPath = async () => tmp;
+    await plugin.workspaceActions[0].action(canceled);
+    assert.strictEqual(fs.readFileSync(canceledPath, 'utf8'), 'keep original', 'canceled dialog must not overwrite filePath');
+    assert.strictEqual(fs.existsSync(path.join(tmp, 'insomnia-openapi-drift.md')), false, 'canceled dialog must not write fallback');
+    assert.deepStrictEqual(canceled.alerts, [], 'canceled dialog must not alert');
+
+    const fallbackPath = path.join(tmp, 'insomnia-openapi-drift.md');
+    fs.writeFileSync(fallbackPath, 'keep fallback');
+    for (const result of [null, undefined]) {
+      const noPath = ctx(result);
+      let getPathCalls = 0;
+      noPath.app.getPath = async () => { getPathCalls++; return tmp; };
+      await plugin.requestActions[0].action(noPath);
+      assert.strictEqual(getPathCalls, 0, 'no-path dialog must not seek fallback');
+      assert.strictEqual(fs.readFileSync(fallbackPath, 'utf8'), 'keep fallback', 'no-path dialog must not overwrite fallback');
+      assert.deepStrictEqual(noPath.alerts, [], 'no-path dialog must not alert');
+    }
+
+    fs.rmSync(fallbackPath);
+    const unavailable = ctx(null);
+    delete unavailable.app.showSaveDialog;
+    unavailable.app.getPath = async key => key === 'documents' ? tmp : '';
+    await plugin.workspaceActions[0].action(unavailable);
+    assert(fs.readFileSync(fallbackPath, 'utf8').includes('OpenAPI Drift Check Report'), 'unavailable dialog still writes fallback');
+    assert.strictEqual(unavailable.alerts.length, 1, 'unavailable dialog alerts on fallback export');
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
   console.log('PASS: all tests');
 }
 main().catch(e=>{console.error(e.stack||e);process.exit(1);});
